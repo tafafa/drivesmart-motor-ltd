@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriveSmart Motors Ltd (MySQL Simulation)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font family -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Custom scrollbar for better appearance */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto">
+        
+        <!-- Header and Navigation -->
+        <header class="bg-white shadow-lg rounded-xl p-6 mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">DriveSmart Motors Ltd (MySQL Simulation)</h1>
+            <p class="text-sm text-gray-500 mt-1 text-red-600 font-semibold">
+            </p>
+            
+            <nav class="mt-4 flex flex-wrap gap-3">
+                <button onclick="renderView('view')" id="nav-view" class="px-4 py-2 text-sm font-semibold rounded-lg shadow-md transition-all duration-200 bg-indigo-600 text-white hover:bg-indigo-700">Current Data View (Browse Tables)</button>
+                <button onclick="renderView('usecase')" id="nav-usecase" class="px-4 py-2 text-sm font-semibold rounded-lg shadow-md transition-all duration-200 bg-gray-200 text-gray-800 hover:bg-gray-300">Service & Stock Operations (Insert & Update)</button>
+                <button onclick="renderView('query')" id="nav-query" class="px-4 py-2 text-sm font-semibold rounded-lg shadow-md transition-all duration-200 bg-gray-200 text-gray-800 hover:bg-gray-300">SQL Reporting / Admin (Custom Queries)</button>
+            </nav>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="content-area" class="bg-white p-6 rounded-xl shadow-lg"></main>
+
+        <!-- Notification Modal (Used instead of alert()) -->
+        <div id="notification-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <h3 id="modal-title" class="text-lg font-bold text-gray-800 mb-2"></h3>
+                <p id="modal-message" class="text-gray-600 mb-4"></p>
+                <button onclick="closeModal()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Application Script -->
+    <script type="module">
+        // --- CORE APPLICATION STATE AND UTILITIES ---
+        
+        // Mock data for all five tables (Updated with user's INSERT data)
+        let mockData = {
+            Car: [
+                { carID: 1, make: 'Toyota', model: 'Corolla', year: 2019, color: 'Silver', milage: 35000, fueltype: 'Petrol', transmission: 'Manual', price: 13995.00, status: 'Sold', purchasedate: '2024-10-01' }, // Status changed to 'Sold'
+                { carID: 2, make: 'Honda', model: 'Civic', year: 2020, color: 'Red', milage: 22000, fueltype: 'Petrol', transmission: 'Automatic', price: 15995.00, status: 'Available', purchasedate: '2024-11-10' },
+                { carID: 3, make: 'Ford', model: 'Fiesta', year: 2018, color: 'Blue', milage: 45000, fueltype: 'Petrol', transmission: 'Manual', price: 7995.00, status: 'Sold', purchasedate: '2024-08-15' },
+                { carID: 4, make: 'BMW', model: '320d', year: 2017, color: 'Black', milage: 60000, fueltype: 'Diesel', transmission: 'Automatic', price: 17995.00, status: 'Available', purchasedate: '2023-12-05' },
+                { carID: 5, make: 'Nissan', model: 'Leaf', year: 2021, color: 'White', milage: 12000, fueltype: 'Electric', transmission: 'Automatic', price: 19995.00, status: 'Available', purchasedate: '2024-09-01' },
+                { carID: 6, make: 'Audi', model: 'A3', year: 2015, color: 'Grey', milage: 80000, fueltype: 'Diesel', transmission: 'Manual', price: 8995.00, status: 'Available', purchasedate: '2023-01-10' },
+                { carID: 7, make: 'Kia', model: 'Sportage', year: 2019, color: 'Black', milage: 30000, fueltype: 'Petrol', transmission: 'Automatic', price: 17495.00, status: 'Sold', purchasedate: '2024-10-20' },
+                { carID: 8, make: 'Volkswagen', model: 'Golf', year: 2018, color: 'White', milage: 50000, fueltype: 'Diesel', transmission: 'Manual', price: 12995.00, status: 'Available', purchasedate: '2024-07-18' },
+                { carID: 9, make: 'Mercedes', model: 'C200', year: 2017, color: 'Silver', milage: 70000, fueltype: 'Petrol', transmission: 'Automatic', price: 18995.00, status: 'Available', purchasedate: '2023-09-12' },
+                { carID: 10, make: 'Hyundai', model: 'i10', year: 2020, color: 'Blue', milage: 15000, fueltype: 'Petrol', transmission: 'Manual', price: 9995.00, status: 'Sold', purchasedate: '2024-12-02' },
+                { carID: 11, make: 'Toyota', model: 'Yaris', year: 2016, color: 'Black', milage: 65000, fueltype: 'Petrol', transmission: 'Automatic', price: 8495.00, status: 'Available', purchasedate: '2023-11-04' },
+                { carID: 12, make: 'Renault', model: 'Clio', year: 2019, color: 'Red', milage: 25000, fueltype: 'Petrol', transmission: 'Manual', price: 10995.00, status: 'Available', purchasedate: '2024-06-30' },
+                { carID: 13, make: 'Peugeot', model: '208', year: 2021, color: 'Grey', milage: 12000, fueltype: 'Petrol', transmission: 'Automatic', price: 15495.00, status: 'Available', purchasedate: '2024-03-11' },
+                { carID: 14, make: 'Mazda', model: '3', year: 2018, color: 'Blue', milage: 40000, fueltype: 'Petrol', transmission: 'Manual', price: 12995.00, status: 'Available', purchasedate: '2023-05-20' },
+                { carID: 15, make: 'Tesla', model: 'Model 3', year: 2022, color: 'White', milage: 8000, fueltype: 'Electric', transmission: 'Automatic', price: 32995.00, status: 'Available', purchasedate: '2024-09-14' },
+            ],
+            Staff: [
+                { staffID: 1, phone: '0141 111 0001', email: 'alice@drivesmart.co.uk', firstname: 'Alice', lastname: 'Brown' },
+                { staffID: 2, phone: '0141 111 0002', email: 'ben@drivesmart.co.uk', firstname: 'Ben', lastname: 'Green' },
+                { staffID: 3, phone: '0141 111 0003', email: 'charlie@drivesmart.co.uk', firstname: 'Charlie', lastname: 'Adams' },
+                { staffID: 4, phone: '0141 111 0004', email: 'diane@drivesmart.co.uk', firstname: 'Diane', lastname: 'Miller' },
+                { staffID: 5, phone: '0141 111 0005', email: 'eve@drivesmart.co.uk', firstname: 'Eve', lastname: 'Watson' },
+                { staffID: 6, phone: '0141 111 0006', email: 'frank@drivesmart.co.uk', firstname: 'Frank', lastname: 'Murray' },
+                { staffID: 7, phone: '0141 111 0007', email: 'grace@drivesmart.co.uk', firstname: 'Grace', lastname: 'Hunter' },
+                { staffID: 8, phone: '0141 111 0008', email: 'harry@drivesmart.co.uk', firstname: 'Harry', lastname: 'Wilson' },
+                { staffID: 9, phone: '0141 111 0009', email: 'irene@drivesmart.co.uk', firstname: 'Irene', lastname: 'Taylor' },
+                { staffID: 10, phone: '0141 111 0010', email: 'jack@drivesmart.co.uk', firstname: 'Jack', lastname: 'Stewart' },
+            ],
+            Customer: [
+                { customerID: 1, phone: '07700 900111', email: 'john.smith@email.com', firstname: 'John', lastname: 'Smith', city: 'Glasgow', postcode: 'G3 3CC' },
+                { customerID: 2, phone: '07700 900112', email: 'maria.jones@email.com', firstname: 'Maria', lastname: 'Jones', city: 'Edinburgh', postcode: 'EH1 2BB' },
+                { customerID: 3, phone: '07700 900113', email: 'peter.lee@email.com', firstname: 'Peter', lastname: 'Lee', city: 'Glasgow', postcode: 'G4 0FG' },
+                { customerID: 4, phone: '07700 900114', email: 'susan.brown@email.com', firstname: 'Susan', lastname: 'Brown', city: 'Dundee', postcode: 'DD1 4AB' },
+                { customerID: 5, phone: '07700 900115', email: 'chris.gray@email.com', firstname: 'Chris', lastname: 'Gray', city: 'Aberdeen', postcode: 'AB1 5GF' },
+                { customerID: 6, phone: '07700 900116', email: 'lucy.roberts@email.com', firstname: 'Lucy', lastname: 'Roberts', city: 'Stirling', postcode: 'FK8 1DF' },
+                { customerID: 7, phone: '07700 900117', email: 'allan.king@email.com', firstname: 'Allan', lastname: 'King', city: 'Perth', postcode: 'PH1 3AE' },
+                { customerID: 8, phone: '07700 900118', email: 'jane.doe@email.com', firstname: 'Jane', lastname: 'Doe', city: 'Glasgow', postcode: 'G12 8QQ' },
+                { customerID: 9, phone: '07700 900119', email: 'kevin.morris@email.com', firstname: 'Kevin', lastname: 'Morris', city: 'Falkirk', postcode: 'FK2 7TR' },
+                { customerID: 10, phone: '07700 900120', email: 'natalie.cook@email.com', firstname: 'Natalie', lastname: 'Cook', city: 'Edinburgh', postcode: 'EH2 4RB' },
+                { customerID: 11, phone: '07700 900121', email: 'owen.clark@email.com', firstname: 'Owen', lastname: 'Clark', city: 'Paisley', postcode: 'PA1 1AB' },
+                { customerID: 12, phone: '07700 900122', email: 'megan.bell@email.com', firstname: 'Megan', lastname: 'Bell', city: 'Glasgow', postcode: 'G5 8HF' },
+            ],
+            Sales: [
+                { salesID: 1, carID: 1, customerID: 1, staffID: 1, saleDate: '2025-03-15', salePrice: 13500.00, paymentMethod: 'Bank Transfer' },
+                { salesID: 2, carID: 3, customerID: 2, staffID: 3, saleDate: '2025-02-10', salePrice: 7800.00, paymentMethod: 'Card' },
+                { salesID: 3, carID: 7, customerID: 4, staffID: 2, saleDate: '2025-01-12', salePrice: 17000.00, paymentMethod: 'Finance' },
+                { salesID: 4, carID: 10, customerID: 5, staffID: 5, saleDate: '2025-03-21', salePrice: 9900.00, paymentMethod: 'Cash' },
+                { salesID: 5, carID: 3, customerID: 6, staffID: 4, saleDate: '2025-03-01', salePrice: 8100.00, paymentMethod: 'Card' },
+                { salesID: 6, carID: 7, customerID: 7, staffID: 1, saleDate: '2025-02-15', salePrice: 16800.00, paymentMethod: 'Finance' },
+                { salesID: 7, carID: 10, customerID: 8, staffID: 2, saleDate: '2025-03-19', salePrice: 10000.00, paymentMethod: 'Bank Transfer' },
+                { salesID: 8, carID: 3, customerID: 9, staffID: 3, saleDate: '2025-01-28', salePrice: 7850.00, paymentMethod: 'Cash' },
+                { salesID: 9, carID: 7, customerID: 10, staffID: 5, saleDate: '2025-03-12', salePrice: 16950.00, paymentMethod: 'Card' },
+                { salesID: 10, carID: 10, customerID: 11, staffID: 6, saleDate: '2025-03-25', salePrice: 9800.00, paymentMethod: 'Card' },
+                { salesID: 11, carID: 3, customerID: 12, staffID: 7, saleDate: '2025-03-05', salePrice: 7900.00, paymentMethod: 'Card' },
+                { salesID: 12, carID: 1, customerID: 3, staffID: 1, saleDate: '2025-03-20', salePrice: 13400.00, paymentMethod: 'Card' },
+            ],
+            Service: [
+                { serviceID: 1, carID: 1, staffID: 2, serviceDate: '2025-02-01', serviceType: 'Oil Change', serviceCost: 45.00, notes: 'Routine' },
+                { serviceID: 2, carID: 2, staffID: 3, serviceDate: '2025-01-05', serviceType: 'Full Service', serviceCost: 180.00, notes: 'Annual full service' },
+                { serviceID: 3, carID: 3, staffID: 4, serviceDate: '2025-01-18', serviceType: 'Brake Check', serviceCost: 60.00, notes: 'Front pads worn' },
+                { serviceID: 4, carID: 4, staffID: 5, serviceDate: '2025-02-10', serviceType: 'Tyre Replacement', serviceCost: 320.00, notes: 'Changed all tyres' },
+                { serviceID: 5, carID: 5, staffID: 6, serviceDate: '2025-03-01', serviceType: 'Battery Check', serviceCost: 30.00, notes: 'EV battery OK' },
+                { serviceID: 6, carID: 6, staffID: 7, serviceDate: '2025-03-12', serviceType: 'MOT', serviceCost: 55.00, notes: 'Passed' },
+                { serviceID: 7, carID: 7, staffID: 8, serviceDate: '2025-01-28', serviceType: 'Oil Change', serviceCost: 40.00, notes: 'Basic service' },
+                { serviceID: 8, carID: 8, staffID: 9, serviceDate: '2025-02-14', serviceType: 'Clutch Repair', serviceCost: 450.00, notes: 'Replaced clutch plate' },
+                { serviceID: 9, carID: 9, staffID: 3, serviceDate: '2025-03-03', serviceType: 'Engine Diagnostic', serviceCost: 70.00, notes: 'No major faults' },
+                { serviceID: 10, carID: 10, staffID: 1, serviceDate: '2025-01-15', serviceType: 'Air Filter Change', serviceCost: 25.00, notes: 'Routine' },
+                { serviceID: 11, carID: 11, staffID: 4, serviceDate: '2025-03-20', serviceType: 'Coolant Flush', serviceCost: 65.00, notes: 'Preventive' },
+                { serviceID: 12, carID: 12, staffID: 2, serviceDate: '2025-02-05', serviceType: 'Full Service', serviceCost: 160.00, notes: 'Annual' },
+                { serviceID: 13, carID: 13, staffID: 6, serviceDate: '2025-02-27', serviceType: 'Tyre Rotation', serviceCost: 30.00, notes: 'Routine' },
+                { serviceID: 14, carID: 14, staffID: 9, serviceDate: '2025-03-11', serviceType: 'Battery Check', serviceCost: 25.00, notes: 'Battery tested' },
+                { serviceID: 15, carID: 15, staffID: 5, serviceDate: '2025-01-23', serviceType: 'Software Update', serviceCost: 0.00, notes: 'EV firmware upgraded' },
+            ],
+        };
+
+        // Utility to generate next sequential ID for dynamic inserts (Updated)
+        let nextIds = {
+            Car: 16, // Max ID 15 + 1
+            Staff: 11, // Max ID 10 + 1
+            Customer: 13, // Max ID 12 + 1
+            Sales: 13, // Max ID 12 + 1
+            Service: 16, // Max ID 15 + 1
+        };
+        
+        const tableFieldMap = {
+            Car: ['carID', 'make', 'model', 'year', 'color', 'milage', 'fueltype', 'transmission', 'price', 'status', 'purchasedate'],
+            Staff: ['staffID', 'firstname', 'lastname', 'phone', 'email'],
+            Customer: ['customerID', 'firstname', 'lastname', 'phone', 'email', 'city', 'postcode'],
+            Sales: ['salesID', 'carID', 'customerID', 'staffID', 'saleDate', 'salePrice', 'paymentMethod'],
+            Service: ['serviceID', 'carID', 'staffID', 'serviceDate', 'serviceType', 'serviceCost', 'notes']
+        };
+
+        // Utility function for custom modal
+        window.showModal = (title, message) => {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('notification-modal').classList.remove('hidden');
+            document.getElementById('notification-modal').classList.add('flex');
+        };
+
+        window.closeModal = () => {
+            document.getElementById('notification-modal').classList.add('hidden');
+            document.getElementById('notification-modal').classList.remove('flex');
+        };
+        
+        // --- MOCK DATABASE API (Simulates Backend MySQL calls) ---
+        const mockDatabaseAPI = {
+            // Simulates SELECT * FROM [tableName]
+            getAll: (tableName) => {
+                return new Promise(resolve => {
+                    setTimeout(() => resolve(mockData[tableName] || []), 200); // Simulate network delay
+                });
+            },
+
+            // Simulates INSERT INTO Car
+            addNewCar: (newCar) => {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        if (!newCar.make || !newCar.model || newCar.price === undefined) {
+                            return reject(new Error("Missing required fields."));
+                        }
+                        
+                        const carWithId = { ...newCar, carID: nextIds.Car++ };
+                        mockData.Car.push(carWithId);
+                        resolve({ id: carWithId.carID, message: "Car added successfully." });
+                    }, 300);
+                });
+            },
+            
+            // Simulates TRANSACTION: UPDATE Car status and INSERT Service record
+            logNewService: (serviceDetails) => {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        const { carID, staffID, serviceType, serviceCost, serviceDate, notes } = serviceDetails;
+
+                        // 1. Check Foreign Keys
+                        const carExists = mockData.Car.some(c => c.carID === carID);
+                        const staffExists = mockData.Staff.some(s => s.staffID === staffID);
+
+                        if (!carExists) return reject(new Error(`Car ID ${carID} not found (Foreign Key constraint failed).`));
+                        if (!staffExists) return reject(new Error(`Staff ID ${staffID} not found (Foreign Key constraint failed).`));
+
+                        // 2. Update Car Status (UPDATE Car SET status = 'InService' WHERE carID = [X])
+                        const carIndex = mockData.Car.findIndex(c => c.carID === carID);
+                        if (carIndex !== -1) {
+                            mockData.Car[carIndex].status = 'InService';
+                        }
+
+                        // 3. Insert into Service (INSERT INTO Service)
+                        const newServiceId = nextIds.Service++;
+                        const newServiceRecord = {
+                            serviceID: newServiceId,
+                            carID: carID,
+                            staffID: staffID,
+                            serviceDate: serviceDate,
+                            serviceType: serviceType,
+                            serviceCost: parseFloat(serviceCost),
+                            notes: notes || null,
+                        };
+                        mockData.Service.push(newServiceRecord);
+                        
+                        resolve({ id: newServiceId, message: `Service logged (ID: ${newServiceId}) and Car ID ${carID} status updated to 'InService'.` });
+                    }, 500);
+                });
+            },
+
+            // Simulates running an arbitrary query against the data model
+            runSQLQuery: (query) => {
+                return new Promise((resolve, reject) => {
+                    if (query.toUpperCase().startsWith("SELECT")) {
+                        // For SELECT, we parse the FROM clause to identify the table, defaulting to Car
+                        const fromMatch = query.match(/FROM\s+(\w+)/i);
+                        const tableName = fromMatch && mockData[fromMatch[1]] ? fromMatch[1] : 'Car';
+
+                        // Check if WHERE clause exists
+                        const whereMatch = query.match(/WHERE\s+(.*)/i);
+                        let filteredData = mockData[tableName] || [];
+
+                        if (whereMatch) {
+                            const condition = whereMatch[1].trim();
+                            // Filter data using client-side evaluation (simulates MySQL WHERE clause execution)
+                            const currentFields = tableFieldMap[tableName] || Object.keys(mockData[tableName][0] || {});
+                            filteredData = mockData[tableName].filter(row => {
+                                try {
+                                    return evaluateCondition(row, condition, currentFields);
+                                } catch (e) {
+                                    console.error("Filter evaluation error:", e);
+                                    return false;
+                                }
+                            });
+                        }
+                        resolve(filteredData);
+
+                    } else if (query.toUpperCase().startsWith("UPDATE")) {
+                        // Simulate simple UPDATE Car SET status = 'Sold' WHERE carID = 3
+                        const updateMatch = query.match(/UPDATE\s+Car\s+SET\s+status\s*=\s*'(\w+)'\s+WHERE\s+carID\s*=\s*(\d+)/i);
+                        if (updateMatch) {
+                            const newStatus = updateMatch[1];
+                            const carID = parseInt(updateMatch[2]);
+                            const carIndex = mockData.Car.findIndex(c => c.carID === carID);
+
+                            if (carIndex !== -1) {
+                                mockData.Car[carIndex].status = newStatus;
+                                resolve({ message: `Car ID ${carID} status updated to ${newStatus}.` });
+                            } else {
+                                reject(new Error(`Car ID ${carID} not found.`));
+                            }
+                        } else {
+                            reject(new Error("Unsupported UPDATE query format. Only simple Car status updates are supported in simulation."));
+                        }
+                    } else {
+                        // Reject commands like INSERT, DELETE, or DROP TABLE in the simulation for simplicity
+                        reject(new Error("Only SELECT and simple UPDATE Car queries are supported in this simulation."));
+                    }
+                });
+            }
+        };
+
+        // --- 3. RENDERING FUNCTIONS ---
+
+        // Controls which main view is displayed
+        window.renderView = async (viewName) => {
+            const contentArea = document.getElementById('content-area');
+            const navButtons = document.querySelectorAll('nav button');
+
+            // Update active navigation button
+            navButtons.forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+                btn.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+            });
+            const activeBtn = document.getElementById(`nav-${viewName}`);
+            activeBtn.classList.remove('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+            activeBtn.classList.add('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+
+            // Render the specific view content
+            contentArea.innerHTML = ''; // Clear content
+
+            if (viewName === 'view') {
+                contentArea.innerHTML = renderTableViewSelector();
+                // Default to loading the Car table
+                loadTableData('Car', 'table-view-container');
+            } else if (viewName === 'usecase') {
+                contentArea.innerHTML = renderUseCaseForm();
+            } else if (viewName === 'query') {
+                 contentArea.innerHTML = renderQueryRunner();
+                 // Load initial unfiltered data into the query container
+                 loadTableData('Car', 'query-results-container', true);
+            }
+        };
+        
+        // Renders the selector for the table view
+        function renderTableViewSelector() {
+            const tableNames = Object.keys(mockData);
+            return `
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">View Data in Tables</h2>
+                <div class="flex items-center space-x-4 mb-6">
+                    <label for="table-selector" class="text-lg font-medium text-gray-700">Select Table:</label>
+                    <select id="table-selector" onchange="loadTableData(this.value, 'table-view-container')" class="rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                        ${tableNames.map(name => `<option value="${name}">${name}</option>`).join('')}
+                    </select>
+                </div>
+                <div id="table-view-container">Loading Car data...</div>
+            `;
+        }
+
+        // Fetches and renders data for any table
+        window.loadTableData = async (tableName, containerId, isQueryView = false) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.innerHTML = `<div class="p-4 text-center text-gray-500">Loading ${tableName} data...</div>`;
+
+            try {
+                const data = await mockDatabaseAPI.getAll(tableName);
+                if (!isQueryView) {
+                     // Only update the header if not in the query view
+                    const tableSelector = document.getElementById('table-selector');
+                    if(tableSelector) tableSelector.value = tableName; // Ensure selector reflects loaded table
+                }
+                renderGenericTable(data, containerId, tableFieldMap[tableName] || Object.keys(data[0] || {}));
+            } catch (e) {
+                container.innerHTML = `<div class="p-6 bg-red-100 rounded-lg border-l-4 border-red-400"><p class="text-sm text-red-800">Error loading data for ${tableName}: ${e.message}</p></div>`;
+            }
+        };
+
+        // Renders a table for any dataset
+        function renderGenericTable(data, containerId, fields) {
+            const container = document.getElementById(containerId);
+            if (!container) return; 
+
+            if (data.length === 0) {
+                container.innerHTML = `<div class="p-6 bg-yellow-50 rounded-lg border-l-4 border-yellow-400"><p class="text-sm text-yellow-800">No records found.</p></div>`;
+                return;
+            }
+
+            const tableHtml = `
+                <div class="overflow-x-auto rounded-lg shadow-md mt-4">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                ${fields.map(field => `
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${field}</th>
+                                `).join('')}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${data.map(row => `
+                                <tr class="hover:bg-gray-50 transition duration-150">
+                                    ${fields.map(field => {
+                                        let value = row[field];
+                                        if (field === 'salePrice' || field === 'serviceCost') {
+                                            value = `$${(value || 0).toFixed(2)}`;
+                                        } else if (field === 'price') {
+                                            value = `$${(value || 0).toFixed(2)}`;
+                                        } else if (typeof value === 'number' && field.toLowerCase().includes('id')) {
+                                            // IDs are displayed as is
+                                        } else if (typeof value === 'number') {
+                                            value = value.toLocaleString();
+                                        } else if (value === null || value === undefined) {
+                                            value = 'NULL';
+                                        }
+
+                                        let styleClass = '';
+                                        if (field === 'status' && row[field]) {
+                                            styleClass = `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                row[field] === 'Available' ? 'bg-green-100 text-green-800' :
+                                                row[field] === 'Sold' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                            }`;
+                                            value = `<span class="${styleClass}">${row[field]}</span>`;
+                                        }
+
+                                        return `<td class="px-4 py-3 whitespace-nowrap text-sm ${field === 'status' ? '' : 'text-gray-600'}">${value}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            container.innerHTML = tableHtml;
+        }
+
+        // Renders the Use Case Form (Feature A - Add New Car & Log Service)
+        function renderUseCaseForm() {
+            const today = new Date().toISOString().split('T')[0];
+            return `
+                <h2 class="text-2xl font-semibold mb-6 text-gray-700">Available Use Cases</h2>
+                
+                <!-- Use Case 1: Add New Vehicle -->
+                <div class="mb-8 p-6 rounded-lg shadow-xl border-t-4 border-green-500 bg-white">
+                    <h3 class="text-xl font-bold mb-4 text-green-700">1. Add New Vehicle to Stock</h3>
+                    <form id="add-car-form" class="space-y-4 max-w-xl">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="make" class="block text-sm font-medium text-gray-700">Make (VARCHAR(50) NOT NULL)</label>
+                                <input type="text" id="make" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="model" class="block text-sm font-medium text-gray-700">Model (VARCHAR(50) NOT NULL)</label>
+                                <input type="text" id="model" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="year" class="block text-sm font-medium text-gray-700">Year (INT > 1900)</label>
+                                <input type="number" id="year" required min="1900" max="${new Date().getFullYear() + 1}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="price" class="block text-sm font-medium text-gray-700">Price (DECIMAL(12,2) $\ge$ 0)</label>
+                                <input type="number" id="price" required min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="milage" class="block text-sm font-medium text-gray-700">Mileage (INT $\ge$ 0)</label>
+                                <input type="number" id="milage" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="fueltype" class="block text-sm font-medium text-gray-700">Fuel Type</label>
+                                <select id="fueltype" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="Petrol">Petrol</option>
+                                    <option value="Diesel">Diesel</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                    <option value="Electric">Electric</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="transmission" class="block text-sm font-medium text-gray-700">Transmission</label>
+                                <select id="transmission" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="Automatic">Automatic</option>
+                                    <option value="Manual">Manual</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="color" class="block text-sm font-medium text-gray-700">Color</label>
+                                <input type="text" id="color" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out">
+                            Simulate SQL INSERT
+                        </button>
+                        <p id="use-case-status" class="mt-3 text-sm text-center text-gray-600"></p>
+                    </form>
+                </div>
+                
+                <!-- New Use Case 2: Log Service Appointment (Car & Service) -->
+                <div class="p-6 rounded-lg shadow-xl border-t-4 border-blue-500 bg-blue-50">
+                    <h3 class="text-xl font-bold mb-4 text-blue-700">2. Log New Service Appointment</h3>
+                    <form id="log-service-form" class="space-y-4 max-w-xl">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="service-carid" class="block text-sm font-medium text-gray-700">Car ID (INT, $\to$ Car Table)</label>
+                                <input type="number" id="service-carid" required min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="service-staffid" class="block text-sm font-medium text-gray-700">Staff ID (INT, $\to$ Staff Table)</label>
+                                <input type="number" id="service-staffid" required min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="service-type" class="block text-sm font-medium text-gray-700">Service Type (VARCHAR(100))</label>
+                            <input type="text" id="service-type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="service-cost" class="block text-sm font-medium text-gray-700">Service Cost (DECIMAL(12,2) $\ge$ 0)</label>
+                                <input type="number" id="service-cost" required min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="service-date" class="block text-sm font-medium text-gray-700">Service Date (DATE)</label>
+                                <input type="date" id="service-date" value="${today}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="service-notes" class="block text-sm font-medium text-gray-700">Notes (TEXT)</label>
+                            <textarea id="service-notes" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        </div>
+                        <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                            Log Service & Set Car Status to 'InService'
+                        </button>
+                        <p id="service-status" class="mt-3 text-sm text-center text-gray-600"></p>
+                    </form>
+                </div>
+            `;
+        }
+        
+        // Renders the Query Runner (Feature C - Filtering/Searching with SQL Syntax)
+        function renderQueryRunner() {
+            return `
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">Run Arbitrary Queries (MySQL Syntax Simulation)</h2>
+                <p class="text-sm text-gray-600 mb-4">Enter a SELECT or simple UPDATE query. This mimics sending raw SQL to a MySQL backend.</p>
+                
+                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200 mb-6">
+                    <p class="font-semibold text-indigo-700 mb-2">Supported SQL Commands (Simulated):</p>
+                    <ul class="text-sm text-indigo-800 list-disc list-inside space-y-1 font-mono">
+                        <li><code>SELECT * FROM Car WHERE year > 2020 AND status == 'Available'</code></li>
+                        <li><code>SELECT * FROM Staff WHERE firstname == 'Alice'</code></li>
+                        <li><code>UPDATE Car SET status = 'Sold' WHERE carID = 3</code> (Only Car status updates supported)</li>
+                    </ul>
+                </div>
+
+                <div class="flex flex-col space-y-4 max-w-3xl">
+                    <textarea id="query-input" rows="3" placeholder="Enter SQL Query here..." class="rounded-md border-gray-300 shadow-sm p-3 border focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+                    <div class="flex space-x-4">
+                        <button onclick="runCustomQuery()" class="flex-1 px-4 py-2 text-sm font-semibold rounded-md shadow-md text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 ease-in-out">
+                            Execute SQL Query
+                        </button>
+                        <button onclick="clearQuery()" class="px-4 py-2 text-sm font-semibold rounded-md shadow-md text-gray-800 bg-gray-200 hover:bg-gray-300 transition duration-150 ease-in-out">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-xl font-medium mb-3 text-gray-700" id="query-results-header">Results:</h3>
+                    <div id="query-results-container">
+                        <!-- Table will be rendered here -->
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 4. API / BACKEND HANDLERS ---
+
+        // Feature A: Handle both Add Car and Log Service Submissions
+        document.addEventListener('submit', async (e) => {
+            if (e.target.id === 'add-car-form') {
+                e.preventDefault();
+                const form = e.target;
+                const statusElement = document.getElementById('use-case-status');
+                
+                const newCar = {
+                    make: form.make.value,
+                    model: form.model.value,
+                    year: parseInt(form.year.value),
+                    color: form.color.value,
+                    milage: parseInt(form.milage.value),
+                    fueltype: form.fueltype.value,
+                    transmission: form.transmission.value,
+                    price: parseFloat(form.price.value),
+                    status: 'Available', // Default constraint
+                    purchasedate: new Date().toISOString().split('T')[0]
+                };
+
+                // Basic data validation
+                if (newCar.year < 1900 || newCar.price < 0 || newCar.milage < 0) {
+                     showModal("Validation Error", "Please ensure year, price, and mileage are valid per database constraints.");
+                     return;
+                }
+
+                statusElement.textContent = "Simulating INSERT...";
+                statusElement.classList.remove('text-red-600', 'text-green-600');
+                
+                try {
+                    const response = await mockDatabaseAPI.addNewCar(newCar);
+                    form.reset();
+                    statusElement.textContent = `Vehicle successfully added (ID: ${response.id})!`;
+                    statusElement.classList.add('text-green-600');
+                    showModal("SQL INSERT Success", `Car added successfully! New Car ID: ${response.id}`);
+                    
+                    // Re-render the main view if it was open to show the new data
+                    renderView('view');
+                } catch (error) {
+                    console.error("Error adding car: ", error);
+                    statusElement.textContent = `Error: ${error.message}`;
+                    statusElement.classList.add('text-red-600');
+                    showModal("SQL Error", `Failed to add car: ${error.message}`);
+                }
+            } else if (e.target.id === 'log-service-form') {
+                e.preventDefault();
+                const form = e.target;
+                const statusElement = document.getElementById('service-status');
+
+                const serviceDetails = {
+                    carID: parseInt(form['service-carid'].value),
+                    staffID: parseInt(form['service-staffid'].value),
+                    serviceType: form['service-type'].value,
+                    serviceCost: parseFloat(form['service-cost'].value),
+                    serviceDate: form['service-date'].value,
+                    notes: form['service-notes'].value,
+                };
+
+                if (serviceDetails.serviceCost < 0) {
+                     showModal("Validation Error", "Service Cost must be zero or positive.");
+                     return;
+                }
+
+                statusElement.textContent = "Simulating TRANSACTION (Update & Insert)...";
+                statusElement.classList.remove('text-red-600', 'text-blue-600');
+
+                try {
+                    const response = await mockDatabaseAPI.logNewService(serviceDetails);
+                    form.reset();
+                    statusElement.textContent = `Service successfully logged (ID: ${response.id})! Car status updated.`;
+                    statusElement.classList.add('text-blue-600');
+                    showModal("Service Transaction Success", response.message);
+                    
+                    // Re-render the main view to show updated Car status and new Service record
+                    renderView('view');
+                } catch (error) {
+                    console.error("Error logging service: ", error);
+                    statusElement.textContent = `Transaction Error: ${error.message}`;
+                    statusElement.classList.add('text-red-600');
+                    showModal("SQL Transaction Error", `Failed to log service: ${error.message}`);
+                }
+            }
+        });
+
+        // Feature C: Run Custom Query (SQL Syntax)
+        window.runCustomQuery = async () => {
+            const queryInput = document.getElementById('query-input').value.trim();
+            const resultsHeader = document.getElementById('query-results-header');
+            
+            if (!queryInput) {
+                clearQuery();
+                return;
+            }
+
+            const queryType = queryInput.trim().toUpperCase().split(/\s+/)[0];
+            resultsHeader.textContent = "Executing Query...";
+            const container = document.getElementById('query-results-container');
+            container.innerHTML = `<p class="text-sm text-gray-500">Processing SQL statement...</p>`;
+            
+            if (queryType === 'SELECT') {
+                try {
+                    // 1. Get the table name from the query
+                    const fromMatch = queryInput.match(/FROM\s+(\w+)/i);
+                    const tableName = fromMatch && mockData[fromMatch[1]] ? fromMatch[1] : 'Car';
+                    const fields = tableFieldMap[tableName] || Object.keys(mockData[tableName][0] || {});
+
+                    // 2. Run the query against the mock API (which performs the filtering)
+                    const filteredData = await mockDatabaseAPI.runSQLQuery(queryInput);
+
+                    // 3. Return and display results
+                    resultsHeader.textContent = `Results: SELECT ${tableName} (${filteredData.length} records)`;
+                    renderGenericTable(filteredData, 'query-results-container', fields);
+                    
+                } catch (error) {
+                    resultsHeader.textContent = `Results: Query Failed`;
+                    container.innerHTML = `<p class="text-sm text-red-600 font-semibold">${error.message}</p>`;
+                }
+            } else if (queryType === 'UPDATE') {
+                 // UPDATE queries go directly to the mock API to change the underlying data
+                 try {
+                     const response = await mockDatabaseAPI.runSQLQuery(queryInput);
+                     resultsHeader.textContent = `Results: UPDATE Success`;
+                     container.innerHTML = `<p class="text-sm text-green-600 font-semibold">${response.message}</p>`;
+                     
+                     // Re-render the main view if it was open to show the updated data
+                     renderView('view');
+                     
+                 } catch (error) {
+                     resultsHeader.textContent = `Results: UPDATE Failed`;
+                     container.innerHTML = `<p class="text-sm text-red-600 font-semibold">${error.message}</p>`;
+                 }
+            } else {
+                 resultsHeader.textContent = `Results: Command Not Supported`;
+                 container.innerHTML = `<p class="text-sm text-red-600 font-semibold">Only SELECT and simple UPDATE Car queries are supported in this simulation.!</p>`;
+            }
+        };
+        
+        // Helper function to evaluate SQL-like WHERE conditions using JavaScript syntax
+        function evaluateCondition(row, conditionString, fields) {
+            let jsCondition = conditionString;
+            
+            // 1. Replace field names (e.g., 'price' -> 'row.price')
+            fields.forEach(field => {
+                const regex = new RegExp(`\\b${field}\\b`, 'g');
+                jsCondition = jsCondition.replace(regex, `row.${field}`);
+            });
+            
+            // 2. Replace logical operators (AND/OR) and equality operators
+            jsCondition = jsCondition.replace(/AND/gi, '&&')
+                                     .replace(/OR/gi, '||')
+                                     .replace(/==/g, '===') // Use strict equality for robust comparisons
+                                     .replace(/!=/g, '!==');
+
+            // 3. The actual evaluation function
+            // Note: We use the Function constructor to dynamically execute the translated query string
+            return new Function('row', `return ${jsCondition};`)(row);
+        }
+
+
+        window.clearQuery = async () => {
+            document.getElementById('query-input').value = '';
+            
+            const initialData = await mockDatabaseAPI.getAll('Car');
+            const container = document.getElementById('query-results-container');
+            
+            document.getElementById('query-results-header').textContent = `Results: All Inventory (Car) (${initialData.length} records)`;
+            renderGenericTable(initialData, 'query-results-container', tableFieldMap.Car);
+        }
+
+        // --- START APPLICATION ---
+        window.onload = () => {
+             // We start by rendering the default view to load initial data
+             renderView('view');
+             document.getElementById('user-id-display').textContent = 'N/A (MySQL Simulation)';
+        }
+    </script>
+</body>
+</html>
